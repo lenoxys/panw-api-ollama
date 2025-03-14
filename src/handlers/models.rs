@@ -1,14 +1,11 @@
-use axum::{
-    extract::State,
-    response::Response,
-    Json,
-};
-use serde::{Serialize, Deserialize};
+use axum::http::{Method, StatusCode};
+use axum::{extract::State, response::Response, Json};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::debug;
 
-use crate::AppState;
 use crate::handlers::ApiError;
+use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ModelRequest {
@@ -19,85 +16,174 @@ pub struct ModelRequest {
     pub stream: Option<bool>,
 }
 
-async fn forward_request<T: Serialize>(
+/// Represents the available Ollama API endpoints.
+pub enum OllamaEndpoint {
+    Tags,
+    Show,
+    Create,
+    Copy,
+    Delete,
+    Pull,
+    Push,
+}
+
+impl OllamaEndpoint {
+    /// Returns the API path for the endpoint.
+    fn path(&self) -> &'static str {
+        match self {
+            Self::Tags => "/api/tags",
+            Self::Show => "/api/show",
+            Self::Create => "/api/create",
+            Self::Copy => "/api/copy",
+            Self::Delete => "/api/delete",
+            Self::Pull => "/api/pull",
+            Self::Push => "/api/push",
+        }
+    }
+
+    /// Returns the HTTP method for the endpoint.
+    fn method(&self) -> Method {
+        match self {
+            Self::Tags => Method::GET,
+            _ => Method::POST,
+        }
+    }
+
+    /// Returns the appropriate log message prefix for the endpoint.
+    fn log_prefix(&self) -> &'static str {
+        match self {
+            Self::Tags => "Forwarding list models request",
+            Self::Show => "Forwarding show model request for",
+            Self::Create => "Forwarding create model request",
+            Self::Copy => "Forwarding copy model request",
+            Self::Delete => "Forwarding delete model request for",
+            Self::Pull => "Forwarding pull model request for",
+            Self::Push => "Forwarding push model request for",
+        }
+    }
+
+    /// Determines if this endpoint should include model name in logs.
+    fn includes_model_name_in_logs(&self) -> bool {
+        matches!(self, Self::Show | Self::Delete | Self::Pull | Self::Push)
+    }
+}
+
+/// Forwards a request to the Ollama service.
+async fn forward_to_ollama<T: Serialize>(
     state: &AppState,
-    endpoint: &str,
-    body: &T,
-    log_message: &str,
+    endpoint: OllamaEndpoint,
+    body: Option<&T>,
+    model_name: Option<&str>,
 ) -> Result<Response, ApiError> {
+    // Create log message
+    let log_message = if endpoint.includes_model_name_in_logs() {
+        if let Some(name) = model_name {
+            format!("{}: {}", endpoint.log_prefix(), name)
+        } else {
+            endpoint.log_prefix().to_string()
+        }
+    } else {
+        endpoint.log_prefix().to_string()
+    };
+
     debug!("{}", log_message);
-    let response = state.ollama_client.forward(endpoint, body).await?;
-    let body = response.bytes().await.map_err(|e| ApiError::InternalError(e.to_string()))?;
-    
+
+    // Forward the request
+    let response = match endpoint.method() {
+        Method::GET => state.ollama_client.forward_get(endpoint.path()).await?,
+        Method::POST => {
+            let body = body
+                .ok_or_else(|| ApiError::InternalError("Body required for POST request".into()))?;
+            state.ollama_client.forward(endpoint.path(), body).await?
+        }
+        _ => return Err(ApiError::InternalError("Unsupported HTTP method".into())),
+    };
+
+    // Process the response
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+
     Ok(Response::builder()
         .header("Content-Type", "application/json")
-        .body(axum::body::Body::from(body))
+        .status(StatusCode::OK)
+        .body(axum::body::Body::from(bytes))
         .unwrap())
 }
-
-async fn forward_get_request(
-    state: &AppState,
-    endpoint: &str,
-    log_message: &str,
-) -> Result<Response, ApiError> {
-    debug!("{}", log_message);
-    let response = state.ollama_client.forward_get(endpoint).await?;
-    let body = response.bytes().await.map_err(|e| ApiError::InternalError(e.to_string()))?;
-    
-    Ok(Response::builder()
-        .header("Content-Type", "application/json")
-        .body(axum::body::Body::from(body))
-        .unwrap())
+/// Handler for listing models (GET /api/tags)
+pub async fn handle_list_models(State(state): State<AppState>) -> Result<Response, ApiError> {
+    forward_to_ollama::<()>(&state, OllamaEndpoint::Tags, None, None).await
 }
 
-pub async fn handle_list_models(
-    State(state): State<AppState>,
-) -> Result<Response, ApiError> {
-    forward_get_request(&state, "/api/tags", "Forwarding list models request").await
-}
-
+/// Handler for showing model details (POST /api/show)
 pub async fn handle_show_model(
     State(state): State<AppState>,
     Json(request): Json<ModelRequest>,
 ) -> Result<Response, ApiError> {
-    let log_message = format!("Forwarding show model request for: {}", request.name);
-    forward_request(&state, "/api/show", &request, &log_message).await
+    forward_to_ollama(
+        &state,
+        OllamaEndpoint::Show,
+        Some(&request),
+        Some(&request.name),
+    )
+    .await
 }
 
+/// Handler for creating a model (POST /api/create)
 pub async fn handle_create_model(
     State(state): State<AppState>,
     Json(request): Json<Value>,
 ) -> Result<Response, ApiError> {
-    forward_request(&state, "/api/create", &request, "Forwarding create model request").await
+    forward_to_ollama(&state, OllamaEndpoint::Create, Some(&request), None).await
 }
 
+/// Handler for copying a model (POST /api/copy)
 pub async fn handle_copy_model(
     State(state): State<AppState>,
     Json(request): Json<Value>,
 ) -> Result<Response, ApiError> {
-    forward_request(&state, "/api/copy", &request, "Forwarding copy model request").await
+    forward_to_ollama(&state, OllamaEndpoint::Copy, Some(&request), None).await
 }
 
+/// Handler for deleting a model (POST /api/delete)
 pub async fn handle_delete_model(
     State(state): State<AppState>,
     Json(request): Json<ModelRequest>,
 ) -> Result<Response, ApiError> {
-    let log_message = format!("Forwarding delete model request for: {}", request.name);
-    forward_request(&state, "/api/delete", &request, &log_message).await
+    forward_to_ollama(
+        &state,
+        OllamaEndpoint::Delete,
+        Some(&request),
+        Some(&request.name),
+    )
+    .await
 }
 
+/// Handler for pulling a model (POST /api/pull)
 pub async fn handle_pull_model(
     State(state): State<AppState>,
     Json(request): Json<ModelRequest>,
 ) -> Result<Response, ApiError> {
-    let log_message = format!("Forwarding pull model request for: {}", request.name);
-    forward_request(&state, "/api/pull", &request, &log_message).await
+    forward_to_ollama(
+        &state,
+        OllamaEndpoint::Pull,
+        Some(&request),
+        Some(&request.name),
+    )
+    .await
 }
 
+/// Handler for pushing a model (POST /api/push)
 pub async fn handle_push_model(
     State(state): State<AppState>,
     Json(request): Json<ModelRequest>,
 ) -> Result<Response, ApiError> {
-    let log_message = format!("Forwarding push model request for: {}", request.name);
-    forward_request(&state, "/api/push", &request, &log_message).await
+    forward_to_ollama(
+        &state,
+        OllamaEndpoint::Push,
+        Some(&request),
+        Some(&request.name),
+    )
+    .await
 }

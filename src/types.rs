@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::DateTime;
 use chrono::Utc;
 use serde_json::Value;
