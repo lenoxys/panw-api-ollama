@@ -1,4 +1,4 @@
-use crate::types::{AiProfile, Content, Metadata, ScanRequest, PromptFindings, ResponseFindings, ScanResponse};
+use crate::types::{AiProfile, Content, Metadata, ScanRequest, PromptDetected, ResponseDetected, ScanResponse};
 use reqwest::Client;
 use thiserror::Error;
 use tracing::{debug, error};
@@ -78,14 +78,14 @@ impl SecurityClient {
                     profile_name: None,
                     category: "benign".to_string(),
                     action: "allow".to_string(),
-                    prompt_detected: PromptFindings {
+                    prompt_detected: PromptDetected {
                         url_cats: false,
                         dlp: false,
                         injection: false,
                         toxic_content: false,
                         malicious_code: false,
                     },
-                    response_detected: ResponseFindings {
+                    response_detected: ResponseDetected {
                         url_cats: false,
                         dlp: false,
                         db_security: false,
