@@ -1,4 +1,8 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+use chrono::DateTime;
+use chrono::Utc;
+use serde_json::Value;
 
 // Ollama API types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,7 +22,7 @@ pub struct GenerateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub options: Option<serde_json::Value>,
+    pub options: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,7 +44,7 @@ pub struct ChatRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub options: Option<serde_json::Value>,
+    pub options: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,7 +66,7 @@ pub struct EmbeddingsRequest {
     pub model: String,
     pub prompt: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub options: Option<serde_json::Value>,
+    pub options: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,41 +123,39 @@ pub struct Metadata {
     pub ai_model: String,
 }
 
-// Updated Content struct to match Palo Alto API format
 #[derive(Debug, Clone, Serialize)]
 pub struct Content {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
-
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ScanResponse {
-    #[serde(rename = "report_id")]
+    #[serde(default)]
     pub report_id: String,
-    #[serde(rename = "scan_id")]
+    #[serde(default)]
     pub scan_id: uuid::Uuid,
-    #[serde(rename = "tr_id")]
-    pub transaction_id: Option<String>,
-    #[serde(rename = "profile_id")]
+    #[serde(default)]
+    pub tr_id: Option<String>,
+    #[serde(default)]
     pub profile_id: Option<uuid::Uuid>,
-    #[serde(rename = "profile_name")]
+    #[serde(default)]
     pub profile_name: Option<String>,
     pub category: String,
     pub action: String,
-    #[serde(rename = "prompt_detected")]
-    pub prompt_findings: PromptFindings,
-    #[serde(rename = "response_detected")]
-    pub response_findings: ResponseFindings,
-    #[serde(rename = "created_at")]
-    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
-    #[serde(rename = "completed_at")]
-    pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(default)]
+    pub prompt_detected: PromptFindings,
+    #[serde(default)]
+    pub response_detected: ResponseFindings,
+    #[serde(default)]
+    pub created_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub completed_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct PromptFindings {
     #[serde(default)]
     pub url_cats: bool,
@@ -167,7 +169,7 @@ pub struct PromptFindings {
     pub malicious_code: bool,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct ResponseFindings {
     #[serde(default)]
     pub url_cats: bool,

@@ -72,20 +72,20 @@ impl SecurityClient {
                 action: "allow".to_string(),
                 details: ScanResponse {
                     report_id: "".to_string(),
-                    scan_id: uuid::Uuid::default(), // Use proper UUID initialization
-                    transaction_id: None,           // Previously tr_id
+                    scan_id: uuid::Uuid::default(),
+                    tr_id: None,
                     profile_id: None,
                     profile_name: None,
                     category: "benign".to_string(),
                     action: "allow".to_string(),
-                    prompt_findings: PromptFindings {
+                    prompt_detected: PromptFindings {
                         url_cats: false,
                         dlp: false,
                         injection: false,
                         toxic_content: false,
                         malicious_code: false,
                     },
-                    response_findings: ResponseFindings {
+                    response_detected: ResponseFindings {
                         url_cats: false,
                         dlp: false,
                         db_security: false,
@@ -197,7 +197,7 @@ impl SecurityClient {
         if scan_result.action == "block" {
             warn!(
                 "Security threat detected! Category: {}, Findings: {:#?}",
-                scan_result.category, scan_result.prompt_findings
+                scan_result.category, scan_result.prompt_detected
             );
             return Err(SecurityError::BlockedContent);
         }
