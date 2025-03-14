@@ -1,4 +1,4 @@
-use crate::types::{PromptFindings, ResponseFindings, ScanResponse};
+use crate::types::{PromptDetected, ResponseDetected, ScanResponse};
 use crate::security::{Assessment, SecurityClient};
 use bytes::Bytes;
 use futures_util::Stream;
@@ -94,14 +94,14 @@ where
                 profile_name: None,
                 category: "benign".to_string(),
                 action: "allow".to_string(),
-                prompt_detected: PromptFindings {
+                prompt_detected: PromptDetected {
                     url_cats: false,
                     dlp: false,
                     injection: false,
                     toxic_content: false,
                     malicious_code: false,
                 },
-                response_detected: ResponseFindings {
+                response_detected: ResponseDetected {
                     url_cats: false,
                     dlp: false,
                     db_security: false,

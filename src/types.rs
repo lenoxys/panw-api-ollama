@@ -146,9 +146,9 @@ pub struct ScanResponse {
     pub category: String,
     pub action: String,
     #[serde(default)]
-    pub prompt_detected: PromptFindings,
+    pub prompt_detected: PromptDetected,
     #[serde(default)]
-    pub response_detected: ResponseFindings,
+    pub response_detected: ResponseDetected,
     #[serde(default)]
     pub created_at: Option<DateTime<Utc>>,
     #[serde(default)]
@@ -156,7 +156,7 @@ pub struct ScanResponse {
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
-pub struct PromptFindings {
+pub struct PromptDetected {
     #[serde(default)]
     pub url_cats: bool,
     #[serde(default)]
@@ -170,7 +170,7 @@ pub struct PromptFindings {
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
-pub struct ResponseFindings {
+pub struct ResponseDetected {
     #[serde(default)]
     pub url_cats: bool,
     #[serde(default)]
