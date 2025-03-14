@@ -19,7 +19,6 @@ pub struct ModelRequest {
     pub stream: Option<bool>,
 }
 
-// Fonction générique pour gérer les requêtes de transfert POST avec un corps
 async fn forward_request<T: Serialize>(
     state: &AppState,
     endpoint: &str,
@@ -36,7 +35,6 @@ async fn forward_request<T: Serialize>(
         .unwrap())
 }
 
-// Fonction générique pour gérer les requêtes GET
 async fn forward_get_request(
     state: &AppState,
     endpoint: &str,
@@ -52,7 +50,6 @@ async fn forward_get_request(
         .unwrap())
 }
 
-// Implémentation des points de terminaison avec les fonctions génériques
 pub async fn handle_list_models(
     State(state): State<AppState>,
 ) -> Result<Response, ApiError> {
