@@ -869,28 +869,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ollama-proxy"
-version = "0.2.0"
-dependencies = [
- "async-stream",
- "axum",
- "bytes",
- "chrono",
- "futures-util",
- "http-body-util",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml",
- "thiserror",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -945,6 +923,28 @@ name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
+
+[[package]]
+name = "panw-api-ollama"
+version = "0.3.0"
+dependencies = [
+ "async-stream",
+ "axum",
+ "bytes",
+ "chrono",
+ "futures-util",
+ "http-body-util",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
 
 [[package]]
 name = "parking_lot"
