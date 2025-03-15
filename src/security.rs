@@ -52,7 +52,7 @@ pub struct Assessment {
 //
 // ```
 // let client = SecurityClient::new(
-//     "https://service.api.aisecurity.paloaltonetworks.com",
+//     "https://api.paloaltonetworks.com/ai-runtime",
 //     "your-pan-api-key",
 //     "standard_profile",
 //     "my_application",
