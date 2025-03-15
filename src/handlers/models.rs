@@ -1,9 +1,10 @@
-use axum::http::{Method, StatusCode};
+use axum::http::Method;
 use axum::{extract::State, response::Response, Json};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::debug;
 
+use crate::handlers::utils::build_json_response;
 use crate::handlers::ApiError;
 use crate::AppState;
 
@@ -100,16 +101,12 @@ async fn forward_to_ollama<T: Serialize>(
     };
 
     // Process the response
-    let bytes = response
+    let body_bytes = response
         .bytes()
         .await
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
-    Ok(Response::builder()
-        .header("Content-Type", "application/json")
-        .status(StatusCode::OK)
-        .body(axum::body::Body::from(bytes))
-        .unwrap())
+    Ok(build_json_response(body_bytes)?)
 }
 /// Handler for listing models (GET /api/tags)
 pub async fn handle_list_models(State(state): State<AppState>) -> Result<Response, ApiError> {

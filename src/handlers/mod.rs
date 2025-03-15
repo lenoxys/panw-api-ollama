@@ -1,7 +1,8 @@
-pub mod generate;
 pub mod chat;
-pub mod models;
 pub mod embeddings;
+pub mod generate;
+pub mod models;
+pub mod utils;
 pub mod version;
 
 use axum::{
@@ -25,25 +26,31 @@ impl IntoResponse for ApiError {
             ApiError::OllamaError(err) => {
                 error!("Ollama error: {}", err);
                 (StatusCode::BAD_GATEWAY, format!("Ollama error: {}", err))
-            },
+            }
             ApiError::SecurityError(err) => {
                 error!("Security error: {}", err);
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("Security error: {}", err))
-            },
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Security error: {}", err),
+                )
+            }
             ApiError::SecurityIssue(msg) => {
                 info!("Security issue detected: {}", msg);
                 (StatusCode::FORBIDDEN, format!("Security issue: {}", msg))
-            },
+            }
             ApiError::InternalError(msg) => {
                 error!("Internal error: {}", msg);
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal error: {}", msg))
-            },
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Internal error: {}", msg),
+                )
+            }
         };
-        
+
         let body = Json(json!({
             "error": error_message,
         }));
-        
+
         (status, body).into_response()
     }
 }
