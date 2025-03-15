@@ -32,9 +32,11 @@ impl OllamaClient {
     }
     
     pub async fn forward<T: Serialize>(&self, endpoint: &str, body: &T) -> Result<Response, OllamaError> {
-        debug!("Forwarding request to {}{}", self.base_url, endpoint);
+        let url = format!("{}{}", self.base_url, endpoint);
+        debug!("Forwarding request to {}", url);
+        
         let response = self.client
-            .post(&format!("{}{}", self.base_url, endpoint))
+            .post(&url)
             .json(body)
             .send()
             .await?;

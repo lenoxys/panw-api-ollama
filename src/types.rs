@@ -101,13 +101,30 @@ pub struct VersionResponse {
     pub version: String,
 }
 
-// Palo Alto Networks API types
 #[derive(Debug, Clone, Serialize)]
 pub struct ScanRequest {
     pub tr_id: String,
     pub ai_profile: AiProfile,
     pub metadata: Metadata,
     pub contents: Vec<Content>,
+}
+
+impl ScanResponse {
+    pub fn default_safe_response() -> Self {
+        Self {
+            report_id: String::new(),
+            scan_id: uuid::Uuid::default(),
+            tr_id: None,
+            profile_id: None,
+            profile_name: None,
+            category: "benign".to_string(),
+            action: "allow".to_string(),
+            prompt_detected: PromptDetected::default(),
+            response_detected: ResponseDetected::default(),
+            created_at: None,
+            completed_at: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]

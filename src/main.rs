@@ -1,11 +1,11 @@
 mod config;
+mod handlers;
 mod ollama;
 mod security;
-mod handlers;
-mod types;
 mod stream;
+mod types;
 
-use std::net::{SocketAddr, IpAddr};
+use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 
 use axum::{
@@ -29,12 +29,15 @@ pub struct AppState {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
-    
-    info!("Starting Ollama Proxy");
-    
+
+    info!("Starting panw-api-ollama server");
+
     // Load configuration
-    let config = config::load_config("config.yaml")?;
-    
+    let config = config::load_config("config.yaml").map_err(|e| {
+        eprintln!("Failed to load configuration: {}", e);
+        e
+    })?;
+
     // Create application state
     let state = AppState {
         ollama_client: OllamaClient::new(&config.ollama.base_url),
@@ -46,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &config.security.app_user,
         ),
     };
-    
+
     // Build router with all the Ollama API endpoints
     let app = Router::new()
         .route("/api/generate", post(generate::handle_generate))
@@ -62,16 +65,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/version", get(version::handle_version))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
-    
+
     // Start the server using the new Axum 0.7 API
-    let addr = SocketAddr::new(
-        IpAddr::from_str(&config.server.host)?, 
-        config.server.port
-    );
+    let addr = SocketAddr::new(IpAddr::from_str(&config.server.host)?, config.server.port);
     info!("Listening on {}", addr);
-    
+
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
-    
+
     Ok(())
 }
