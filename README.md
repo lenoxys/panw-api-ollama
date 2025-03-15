@@ -6,7 +6,7 @@ Enhance your Ollama deployment with enterprise-grade AI security using Palo Alto
 
 ## What is this?
 
-panw-api-ollama is a security proxy that sits between your [OpenWebUI](https://openwebui.com/) interface and [Ollama](https://ollama.com/) instance. It works by intercepting all prompts and responses, analyzing them with Palo Alto Networks' AI security technology, and protecting your system from:
+panw-api-ollama is a security proxy that sits between your [OpenWebUI](https://openwebui.com/) interface and [Ollama](https://ollama.com/) instance. It works by intercepting all prompts and responses, analyzing them with Palo Alto Networks' AI RUNTIME security technology, and protecting your system from:
 
 - Prompt injection attacks
 - Data exfiltration attempts
