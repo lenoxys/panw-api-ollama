@@ -73,7 +73,10 @@ impl Config {
         }
 
         // Validate PANW AI AI profile config
-        if self.security.profile_name.is_empty() || self.security.app_name.is_empty() || self.security.app_user.is_empty() {
+        if self.security.profile_name.is_empty()
+            || self.security.app_name.is_empty()
+            || self.security.app_user.is_empty()
+        {
             return Err(ConfigError::ValidationError(
                 "AI Profile settings missing".into(),
             ));
