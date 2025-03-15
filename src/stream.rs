@@ -1,8 +1,8 @@
-use crate::types::{PromptDetected, ResponseDetected, ScanResponse};
 use crate::security::{Assessment, SecurityClient};
+use crate::types::{PromptDetected, ResponseDetected, ScanResponse};
 use bytes::Bytes;
 use futures_util::Stream;
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use thiserror::Error;
@@ -123,17 +123,23 @@ where
     type Item = Result<Bytes, StreamError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        // Early return for finished state
         if self.finished {
             return Poll::Ready(None);
         }
 
+        // Handle pending errors first
         if let Some(err) = self.error.take() {
             self.finished = true;
             return Poll::Ready(Some(Err(err)));
         }
 
+        // Process buffered items before polling the inner stream
         if let Some(item) = self.buffer.take() {
-            let json = serde_json::to_vec(&item).unwrap();
+            let json = match serde_json::to_vec(&item) {
+                Ok(json) => json,
+                Err(e) => return Poll::Ready(Some(Err(StreamError::JsonError(e)))),
+            };
             return Poll::Ready(Some(Ok(Bytes::from(json))));
         }
 
