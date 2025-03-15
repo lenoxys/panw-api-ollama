@@ -16,7 +16,6 @@ pub enum ApiError {
     OllamaError(crate::ollama::OllamaError),
     SecurityError(crate::security::SecurityError),
     SecurityIssue(String),
-    InvalidRequest(String),
     InternalError(String),
 }
 
@@ -34,10 +33,6 @@ impl IntoResponse for ApiError {
             ApiError::SecurityIssue(msg) => {
                 info!("Security issue detected: {}", msg);
                 (StatusCode::FORBIDDEN, format!("Security issue: {}", msg))
-            },
-            ApiError::InvalidRequest(msg) => {
-                error!("Invalid request: {}", msg);
-                (StatusCode::BAD_REQUEST, format!("Invalid request: {}", msg))
             },
             ApiError::InternalError(msg) => {
                 error!("Internal error: {}", msg);

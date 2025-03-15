@@ -25,6 +25,40 @@ pub struct AppState {
     security_client: SecurityClient,
 }
 
+impl AppState {
+    pub fn builder() -> AppStateBuilder {
+        AppStateBuilder::default()
+    }
+}
+
+#[derive(Default)]
+pub struct AppStateBuilder {
+    ollama_client: Option<OllamaClient>,
+    security_client: Option<SecurityClient>,
+}
+
+impl AppStateBuilder {
+    pub fn with_ollama_client(mut self, client: OllamaClient) -> Self {
+        self.ollama_client = Some(client);
+        self
+    }
+
+    pub fn with_security_client(mut self, client: SecurityClient) -> Self {
+        self.security_client = Some(client);
+        self
+    }
+
+    pub fn build(self) -> Result<AppState, &'static str> {
+        let ollama_client = self.ollama_client.ok_or("OllamaClient is required")?;
+        let security_client = self.security_client.ok_or("SecurityClient is required")?;
+
+        Ok(AppState {
+            ollama_client,
+            security_client,
+        })
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging

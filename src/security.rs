@@ -1,4 +1,6 @@
-use crate::types::{AiProfile, Content, Metadata, ScanRequest, PromptDetected, ResponseDetected, ScanResponse};
+use crate::types::{
+    AiProfile, Content, Metadata, ScanRequest, ScanResponse,
+};
 use reqwest::Client;
 use thiserror::Error;
 use tracing::{debug, error, warn};
@@ -8,13 +10,13 @@ use uuid::Uuid;
 pub enum SecurityError {
     #[error("HTTP request failed: {0}")]
     RequestError(#[from] reqwest::Error),
-    
+
     #[error("Security assessment error: {0}")]
     AssessmentError(String),
-    
+
     #[error("JSON parsing error: {0}")]
     JsonError(#[from] serde_json::Error),
-    
+
     #[error("Content blocked by security policy")]
     BlockedContent,
 }
@@ -47,7 +49,13 @@ impl Content {
 }
 
 impl SecurityClient {
-    pub fn new(base_url: &str, api_key: &str, profile_name: &str, app_name: &str, app_user: &str) -> Self {
+    pub fn new(
+        base_url: &str,
+        api_key: &str,
+        profile_name: &str,
+        app_name: &str,
+        app_user: &str,
+    ) -> Self {
         Self {
             client: Client::new(),
             base_url: base_url.to_string(),
@@ -64,7 +72,7 @@ impl SecurityClient {
         model_name: &str,
         is_prompt: bool,
     ) -> Result<Assessment, SecurityError> {
-        // Skip assessment for empty content early to avoid unnecessary allocations
+        // Skip assessment for empty content early
         if content.trim().is_empty() {
             debug!("Skipping assessment for empty content");
             return Ok(Assessment {
@@ -75,16 +83,40 @@ impl SecurityClient {
             });
         }
 
-        // Create the content object based on whether it's a prompt or response
+        // Create the content object
         let content_obj = if is_prompt {
             Content::new(Some(content.to_string()), None)
         } else {
             Content::new(None, Some(content.to_string()))
         }
-        .expect("Invalid content state");
+        .map_err(|e| SecurityError::AssessmentError(e.to_string()))?;
 
-        // Create the request payload
-        let payload = ScanRequest {
+        // Create and send the request payload
+        let payload = self.create_scan_request(content_obj, model_name);
+        let scan_result = self.send_security_request(&payload).await?;
+
+        // Create assessment and check if content should be blocked
+        let assessment = Assessment {
+            is_safe: scan_result.category == "benign",
+            category: scan_result.category.clone(),
+            action: scan_result.action.clone(),
+            details: scan_result,
+        };
+
+        if assessment.action == "block" {
+            warn!(
+                "Security threat detected! Category: {}, Findings: {:#?}",
+                assessment.category, assessment.details.prompt_detected
+            );
+            return Err(SecurityError::BlockedContent);
+        }
+
+        Ok(assessment)
+    }
+
+    // Helper function to create scan request
+    fn create_scan_request(&self, content_obj: Content, model_name: &str) -> ScanRequest {
+        ScanRequest {
             tr_id: Uuid::new_v4().to_string(),
             ai_profile: AiProfile {
                 profile_name: self.profile_name.clone(),
@@ -95,68 +127,36 @@ impl SecurityClient {
                 ai_model: model_name.to_string(),
             },
             contents: vec![content_obj],
-        };
+        }
+    }
 
-        // Create a reusable request builder with common headers
-        let request_builder = self.client
+    // Helper to send the request and handle errors
+    async fn send_security_request(
+        &self,
+        payload: &ScanRequest,
+    ) -> Result<ScanResponse, SecurityError> {
+        let response = self
+            .client
             .post(&format!("{}/v1/scan/sync/request", self.base_url))
             .header("Content-Type", "application/json")
-            .header("x-pan-token", &self.api_key);
-
-        // Build the request for logging purposes
-        let request = request_builder
-            .try_clone()
-            .unwrap()
-            .json(&payload)
-            .build()
-            .map_err(|e| {
-                error!("Failed to build request: {}", e);
-                SecurityError::RequestError(e)
-            })?;
-
-        // Log request details
-        debug!("Request method: {}", request.method());
-        debug!("Request URL: {}", request.url());
-        debug!("Request headers:");
-        for (name, value) in request.headers() {
-            let value_str = if name == "x-pan-token" {
-                "***REDACTED***".to_string()
-            } else {
-                value.to_str().unwrap_or_default().to_string()
-            };
-            debug!(" {}: {}", name, value_str);
-        }
-
-        // Log the JSON body (manually serialize the payload)
-        debug!(
-            "Request body:\n{}",
-            serde_json::to_string_pretty(&payload)
-                .unwrap_or_else(|_| "Failed to serialize payload".to_string())
-        );
-
-        // Send the request to the security API using the reusable request builder
-        let response = request_builder
-            .json(&payload)
+            .header("x-pan-token", &self.api_key)
+            .json(payload)
             .send()
             .await
             .map_err(|e| {
                 error!("Security assessment request failed: {}", e);
-                e
+                SecurityError::RequestError(e)
             })?;
 
-        // Get the status first without consuming the response
         let status = response.status();
-        
-        // Now consume the response body
         let body_text = response.text().await.map_err(|e| {
             error!("Failed to read response body: {}", e);
             SecurityError::RequestError(e)
         })?;
 
-        // Debug the raw response body
+        // Debug the raw response only when debug is enabled
         debug!("Raw response body:\n{}", body_text);
-        
-        // Now handle the status check using the already obtained status
+
         if !status.is_success() {
             error!("Security assessment error: {} - {}", status, body_text);
             return Err(SecurityError::AssessmentError(format!(
@@ -165,29 +165,9 @@ impl SecurityClient {
             )));
         }
 
-        // Parse the response JSON
-        let scan_result: ScanResponse = serde_json::from_str(&body_text).map_err(|e| {
+        serde_json::from_str(&body_text).map_err(|e| {
             error!("Failed to parse security assessment response");
             SecurityError::JsonError(e)
-        })?;
-        
-        // Check if the content should be blocked
-        if scan_result.action == "block" {
-            warn!(
-                "Security threat detected! Category: {}, Findings: {:#?}",
-                scan_result.category, scan_result.prompt_detected
-            );
-            return Err(SecurityError::BlockedContent);
-        }
-
-        // Create an Assessment based on the ScanResponse
-        let assessment = Assessment {
-            is_safe: scan_result.category == "benign",
-            category: scan_result.category.clone(),
-            action: scan_result.action.clone(),
-            details: scan_result,
-        };
-        
-        Ok(assessment)
+        })
     }
 }
