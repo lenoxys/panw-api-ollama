@@ -10,7 +10,7 @@ We welcome contributions to panw-api-ollama! This document provides guidelines f
 4. Write or update tests as necessary
 5. Ensure all tests pass
 6. Commit your changes
-7. Push to your fork
+7. Push to your feature branch (do not push to the `main` branch)
 8. Submit a pull request
 
 ## Code Style
