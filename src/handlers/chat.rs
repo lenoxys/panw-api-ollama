@@ -19,15 +19,10 @@ pub async fn handle_chat(
 ) -> Result<Response, ApiError> {
     debug!("Received chat request for model: {}", request.model);
 
-    // Assess each message in the request
     for message in &request.messages {
         let assessment = state
             .security_client
-            .assess_content(
-                &message.content,
-                &request.model,
-                true, // This is a prompt
-            )
+            .assess_content(&message.content, &request.model, true)
             .await?;
 
         if !assessment.is_safe {
@@ -62,14 +57,9 @@ pub async fn handle_chat(
             ApiError::InternalError("Failed to parse response".to_string())
         })?;
 
-    // Assess response content
     let assessment = state
         .security_client
-        .assess_content(
-            &response_body.message.content,
-            &request.model,
-            false, // This is a response
-        )
+        .assess_content(&response_body.message.content, &request.model, false)
         .await?;
 
     if !assessment.is_safe {
@@ -91,11 +81,11 @@ async fn handle_streaming_chat(
     Json(request): Json<ChatRequest>,
 ) -> Result<Response, ApiError> {
     debug!("Handling streaming chat request");
-    
+
     let model = request.model.clone();
     handle_streaming_request::<ChatRequest, crate::types::ChatResponse>(
         &state,
-        request, // Changed from &request to request (passing ownership)
+        request,
         "/api/chat",
         &model,
     )

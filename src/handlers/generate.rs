@@ -19,14 +19,9 @@ pub async fn handle_generate(
 ) -> Result<Response, ApiError> {
     debug!("Received generate request for model: {}", request.model);
 
-    // Assess the prompt - now specify this is a prompt (true)
     let assessment = state
         .security_client
-        .assess_content(
-            &request.prompt,
-            &request.model,
-            true, // This is a prompt
-        )
+        .assess_content(&request.prompt, &request.model, true)
         .await?;
 
     if !assessment.is_safe {
@@ -64,14 +59,9 @@ pub async fn handle_generate(
             ApiError::InternalError("Failed to parse response".to_string())
         })?;
 
-    // Assess response content - now specify this is a response (false)
     let assessment = state
         .security_client
-        .assess_content(
-            &response_body.response,
-            &request.model,
-            false, // This is a response
-        )
+        .assess_content(&response_body.response, &request.model, false)
         .await?;
 
     if !assessment.is_safe {
@@ -97,7 +87,7 @@ async fn handle_streaming_generate(
     let model = request.model.clone();
     handle_streaming_request::<GenerateRequest, crate::types::GenerateResponse>(
         &state,
-        request, // Changed from &request to request (passing ownership)
+        request,
         "/api/generate",
         &model,
     )
