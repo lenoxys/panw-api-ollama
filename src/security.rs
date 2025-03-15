@@ -36,6 +36,8 @@ pub struct SecurityClient {
     base_url: String,
     api_key: String,
     profile_name: String,
+    app_name: String,
+    app_user: String,
 }
 
 impl Content {
@@ -48,12 +50,14 @@ impl Content {
 }
 
 impl SecurityClient {
-    pub fn new(base_url: &str, api_key: &str, profile_name: &str) -> Self {
+    pub fn new(base_url: &str, api_key: &str, profile_name: &str, app_name: &str, app_user: &str) -> Self {
         Self {
             client: Client::new(),
             base_url: base_url.to_string(),
             api_key: api_key.to_string(),
             profile_name: profile_name.to_string(),
+            app_name: app_name.to_string(),
+            app_user: app_user.to_string(),
         }
     }
 
@@ -113,8 +117,8 @@ impl SecurityClient {
                 profile_name: self.profile_name.clone(),
             },
             metadata: Metadata {
-                app_name: "panw-api-ollama".to_string(),
-                app_user: "ollama-proxy".to_string(),
+                app_name: self.app_name.to_string(),
+                app_user: self.app_user.to_string(),
                 ai_model: model_name.to_string(),
             },
             contents: vec![content_obj],

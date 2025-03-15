@@ -34,6 +34,8 @@ pub struct SecurityConfig {
     pub base_url: String,
     pub api_key: String,
     pub profile_name: String,
+    pub app_name: String,
+    pub app_user: String,
 }
 
 pub fn load_config(path: &str) -> Result<Config, ConfigError> {

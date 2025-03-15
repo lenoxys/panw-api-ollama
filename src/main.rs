@@ -42,6 +42,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &config.security.base_url,
             &config.security.api_key,
             &config.security.profile_name,
+            &config.security.app_name,
+            &config.security.app_user,
         ),
     };
     
