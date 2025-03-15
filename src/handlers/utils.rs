@@ -12,7 +12,7 @@ use crate::{
     AppState,
 };
 
-// Helper function to build a JSON response
+//Builds an HTTP response with JSON content type from the provided bytes.
 pub fn build_json_response(bytes: Bytes) -> Result<Response, ApiError> {
     Response::builder()
         .header("Content-Type", "application/json")
@@ -20,7 +20,11 @@ pub fn build_json_response(bytes: Bytes) -> Result<Response, ApiError> {
         .map_err(|e| ApiError::InternalError(format!("Failed to create response: {}", e)))
 }
 
-// Generic function to handle streaming requests for any API endpoint
+// Handles streaming requests to API endpoints, applying security assessment to the streamed responses.
+//
+// This function takes a request payload, sends it to the specified endpoint using the Ollama client,
+// wraps the resulting stream with security assessment functionality, and returns a properly configured
+// HTTP response that streams the assessed results.
 pub async fn handle_streaming_request<T, R>(
     state: &AppState,
     request: T,
@@ -33,6 +37,7 @@ where
 {
     // No need to clone, we already own the data
     let stream = state.ollama_client.stream(endpoint, &request).await?;
+
     let assessed_stream = SecurityAssessedStream::<_, R>::new(
         stream,
         state.security_client.clone(),
